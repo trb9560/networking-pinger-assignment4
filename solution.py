@@ -10,6 +10,12 @@ import binascii
 ICMP_ECHO_REQUEST = 8
 
 
+def header2dict(names, struct_format, data):
+    """ unpack the raw received IP and ICMP header informations to a dict """
+    unpacked_data = struct.unpack(struct_format, data)
+    return dict(zip(names, unpacked_data))
+
+
 def checksum(string):
     csum = 0
     countTo = (len(string) // 2) * 2
@@ -50,12 +56,28 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         # Fill in start
 
         # Fetch the ICMP header from the IP packet
-        icmpHeader = recPacket[20:28]
-        
+        icmp_header = header2dict(
+            names=[
+                "type", "code", "checksum",
+                "packet_id", "seq_number"
+            ],
+            struct_format="!BBHHH",
+            data=recPacket[20:28]
+        )
+
+        if icmp_header["packet_id"] == ID:  # Our packet
+            packet_size = len(recPacket) - 28
+            return "Reply from %s: bytes= time=ms TTL=" % destAddr
+            # print("Reply from %s: bytes= time=ms TTL=" % destAddr)
+
+#        ttl = struct.unpack("s", bytes([recPacket[8]]))[0]
+        # binary to ascii
+
         # Fill in end
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
             return "Request timed out."
+#            print("Request timed out.")
 
 
 def sendOnePing(mySocket, destAddr, ID):
@@ -117,4 +139,4 @@ def ping(host, timeout=1):
     return vars
 
 if __name__ == '__main__':
-    ping("google.co.il")
+    ping("127.0.0.1")
